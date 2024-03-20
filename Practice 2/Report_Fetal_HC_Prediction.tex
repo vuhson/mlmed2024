@@ -1,0 +1,112 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+% The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\begin{document}
+
+\title{Report: Fetal Head Circumference Prediction\\
+
+
+}
+
+\author{
+    \IEEEauthorblockN{Vu Hung Son}
+    \IEEEauthorblockA{
+        \textit{Department of Information and Communication Technology} \\
+        \textit{University of Science and Technology of Hanoi}\\
+        Hanoi, Vietnam \\
+        vuhson314159@gmail.com
+    }
+}
+
+
+\maketitle
+
+\begin{abstract}
+In this report, I introduce a novel approach utilizing VGG16 for automated fetal head circumference (HC) computation from 2D ultrasound images. My implementation showcases the efficacy of VGG16 in achieving competitive performance, demonstrating its potential in advancing prenatal healthcare through accurate HC measurement.
+\end{abstract}
+
+\begin{IEEEkeywords}
+regression, segmentation, fetal head circumference prediction, U-Net, nnU-Net
+\end{IEEEkeywords}
+
+\section{\textbf{Introduction}}
+Ultrasound imaging is integral for monitoring gestational age and fetal growth, with fetal head circumference (HC) measurements at the standard plane being a key indicator. The HC18 challenge, hosted on the Grand Challenge website, provides a dataset of 1334 two-dimensional (2D) ultrasound images meticulously curated by Van den Heuvel et al. (2018). This dataset includes 999 training and 335 test images, each with dimensions of 800 by 540 pixels. Pixel sizes vary between 0.052 and 0.326 mm, with additional information on pixel size per image provided. Training labels are furnished as ellipses, and submissions are expected in a CSV format with specific parameters describing an ellipse fitted around the standard plane of the fetus. This report delves into leveraging advanced techniques, particularly utilizing VGG16, to automate HC computation from ultrasound images, aiming to enhance prenatal healthcare practices. 
+
+\section{\textbf{Methodology}}
+
+\subsection{\textbf{Image Transformations}}
+In order to harness the full potential of our image data for training and evaluation purposes, a series of meticulously designed transformations are applied. The "Image Transformations" section delineates the key steps undertaken to preprocess our images effectively. \\
+
+\begin{itemize}
+    \item[] \textbf{Gray-scale Conversion:} Initially, images undergo gray-scale conversion to standardize their color channels. This step ensures consistency in subsequent processing stages, facilitating a unified approach to image analysis. 
+    \item[] \textbf{Resizing:} Subsequently, images are resized to a predetermined dimension of (512, 512) pixels. This resizing operation serves to standardize the spatial dimensions of our images, mitigating variations in size across the dataset. 
+    \item[] \textbf{Augmentation Techniques:} During training, augmentation techniques are employed to enhance the robustness and generalization capability of our model. These techniques include:
+    \begin{itemize}
+        \item[-] \textbf{Random Rotation:} Images are subjected to random rotations within a range of ±10 degrees, simulating variations in viewpoint. 
+        \item[-] \textbf{Random Horizontal Flip:} Horizontal flipping is applied randomly, introducing diversity in orientation to augment the dataset. 
+    \end{itemize} 
+    \item[] \textbf{Center Cropping:} Following augmentation (if applicable), images undergo center cropping to a size of (224, 224) pixels. This cropping operation focuses the attention on the central region of interest within each image, aiding in feature extraction and classification tasks. 
+    \item[] \textbf{Conversion to Tensor Format:} Upon pre-processing completion, images are converted into tensor format. This transformation enables seamless integration of image data into PyTorch workflows, facilitating efficient computation and optimization during model training and evaluation. 
+    \item[] \textbf{Normalization:} Finally, images are normalized using pre-computed mean and standard deviation values ([0.485, 0.456, 0.406] and [0.229, 0.224, 0.225] respectively). Normalization standardizes the pixel values across the dataset, ensuring consistency and stability during model training and inference. 
+\end{itemize}
+
+\subsection{\textbf{Pre-processing}}
+In order to effectively analyze and utilize image data within this project, a robust pre-processing pipeline is essential. This is a crucial steps taken to prepare raw image data for further analysis and modeling. \\
+
+\begin{itemize}
+    \item[] \textbf{Image Loading:} The process begins with loading images from their respective file paths. Each image is accessed individually to ensure accurate processing. 
+    \item[] \textbf{Transformation Application:} Upon loading, a designated transformation is applied to each image. These transformations could include resizing, normalization, or any other necessary adjustments tailored to the specific requirements of this project. 
+    \item[] \textbf{Conversion to Numeric Representation:} Following transformation, images are converted into a numerical array format. This step facilitates compatibility with machine learning algorithms and computational operations. 
+    \item[] \textbf{Channel Reordering:} Image arrays are reordered to ensure compatibility with common conventions. This typically involves reordering the dimensions to match the expected format, which often follows the (height, width, channels) convention. 
+    \item[] \textbf{Accumulation:} Processed images are accumulated into a cohesive dataset, preserving their individual transformations and numerical representations. 
+    \item[] \textbf{Output:} The finalized dataset, comprising pre-processed images, is returned as a structured array. This array serves as a foundational element for subsequent analysis, training, and evaluation tasks within this project. 
+\end{itemize}
+
+
+\subsection{\textbf{Model Architecture}}
+The architecture of the VGG16-based model employed in this project is meticulously crafted to effectively automate the computation of fetal head circumference (HC) from ultrasound images. Below is a comprehensive description of the model's architecture:
+\begin{itemize}
+    \item[] \textbf{Input Layer:} 
+    The model's input layer accepts grayscale images resized to a standardized dimension of (224, 224) pixels. This input size ensures compatibility with the VGG16 architecture and facilitates efficient processing.
+    \item[] \textbf{Feature Extraction Backbone:} 
+    Leveraging the pre-trained VGG16 architecture, the model utilizes convolutional layers to extract hierarchical features from input images. These layers are adept at capturing both low-level and high-level features, crucial for accurate HC computation.
+    \item[] \textbf{Global Average Pooling:} 
+    Following feature extraction, a global average pooling layer aggregates spatial information across feature maps, distilling the most salient features while reducing dimensionality. This pooling operation aids in feature abstraction and compression.
+    \item[] \textbf{Regularization:}
+    \begin{itemize}
+        \item[-] Dropout regularization with a rate of 0.7 is applied to mitigate over-fitting, enhancing the model's generalization capability.
+        \item[-] Dense layers with varying widths (512, 256, 128, 64, and 32 units) are incorporated to facilitate non-linear transformations and feature mapping.
+    \end{itemize}
+    \item[] \textbf{Output Layer:} The model's output layer consists of a single neuron, representing the predicted continuous value for HC computation. The activation function is set to 'linear', allowing for direct output without introducing non-linearity.
+\end{itemize}
+
+\textbf{Model Compilation:} Adam optimizer with a learning rate of 0.0001 is employed to optimize model parameters during training.
+Mean squared error (MSE) is utilized as the loss function to quantify the disparity between predicted and actual HC values.
+Mean absolute error (MAE) serves as a metric to evaluate the performance of the model during training and validation. 
+
+\textbf{Training Procedure:} The model is trained over multiple epochs (with early stopping implemented) on the training data, while validation is performed on a separate validation dataset.
+Model weights are periodically saved using a ModelCheckpoint callback, ensuring preservation of the best-performing model.
+
+\section{\textbf{Evaluation}}
+
+
+\section{\textbf{Conclusion}}
+
+In conclusion, the utilization of advanced techniques, particularly the VGG16 architecture, has shown promising results in automating fetal head circumference (HC) computation from 2D ultrasound images. Through meticulous preprocessing and model architecture design, we have demonstrated the efficacy of VGG16 in accurately predicting HC values, contributing to the enhancement of prenatal healthcare practices.
+
+By leveraging the pre-trained VGG16 backbone for feature extraction and incorporating regularization techniques to mitigate overfitting, our model achieves competitive performance in HC computation tasks. The comprehensive preprocessing pipeline ensures that input images are appropriately transformed and standardized, facilitating effective model training and inference.
+
+Moving forward, further optimizations and refinements can be explored to enhance the robustness and generalization capability of the proposed approach. Additionally, extending the application of deep learning models to other aspects of prenatal healthcare could yield significant advancements in medical diagnostics and patient care.
+
+Overall, this study underscores the potential of deep learning methodologies, such as VGG16, in revolutionizing healthcare practices, particularly in the field of obstetrics and prenatal imaging.
+
+
+\end{document}
